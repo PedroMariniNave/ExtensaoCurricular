@@ -1,0 +1,84 @@
+﻿@using ExtensaoCurricular.Client.CadModalBase;
+@using ExtensaoCurricular.Client.Utils;
+@using ExtensaoCurricular.Shared.Enums;
+@using ExtensaoCurricular.Shared.Extensions;
+@using MudBlazor;
+
+@typeparam T where T : class
+
+@implements IDisposable
+
+@inject SnackbarUtils _snackbarUtils
+
+<MudDialog @bind-IsVisible="_visibility">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            @($"{CadModalBaseInfo.Tipo.ToDisplay()} {(NomeCustomizado is not null ? NomeCustomizado : typeof(T).Name)}")
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        @ChildContent
+
+        <div class="d-flex justify-content-center align-items-center">
+            <MudButton Class="my-2" Size="Size.Small" Color="Color.Success" Variant="Variant.Filled" OnClick="HandleSubmitButtonClicked" Disabled="IsAwaitingAPIResponse">
+                @if (IsAwaitingAPIResponse)
+                {
+                    <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                    <span class="ms-2">Aguarde...</span>
+                }
+                else
+                {
+                    <span>Confirmar</span>
+                }
+
+            </MudButton>
+
+            <MudButton Class="mx-2" Size="Size.Small" Color="Color.Error" Variant="Variant.Filled" OnClick="HandleCancelButtonClicked">
+                Cancelar
+            </MudButton>
+        </div>
+    </DialogContent>
+</MudDialog>
+
+@code {
+    [Parameter] public RenderFragment ChildContent { get; set; }
+    [Parameter] public EventCallback<bool> OnSubmit { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public CadModalBaseInfo CadModalBaseInfo { get; set; }
+    [Parameter] public string NomeCustomizado { get; set; }
+    [Parameter] public bool Visibility { get; set; }
+    [Parameter] public EventCallback<bool> VisibilityChanged { get; set; }
+    private bool _visibility
+    {
+        get => Visibility;
+        set
+        {
+            Visibility = value;
+            VisibilityChanged.InvokeAsync(value);
+        }
+    }
+
+    private bool IsAwaitingAPIResponse { get; set; }
+
+    private async Task HandleSubmitButtonClicked()
+    {
+        IsAwaitingAPIResponse = true;
+        await OnSubmit.InvokeAsync();
+        IsAwaitingAPIResponse = false;
+
+        // TODO: tratar falha
+        _visibility = false;
+        _snackbarUtils.ShowSuccess($"Sucesso ao {CadModalBaseInfo.Tipo.ToDisplay().ToLower()}.");
+    }
+
+    private async Task HandleCancelButtonClicked()
+    {
+        _visibility = false;
+        await OnCancel.InvokeAsync();
+    }
+
+    public void Dispose()
+    {
+        CadModalBaseInfo.ResetInfo();
+    }
+}

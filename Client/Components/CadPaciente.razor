@@ -1,0 +1,69 @@
+﻿@using ExtensaoCurricular.Client.CadModalBase;
+@using ExtensaoCurricular.Client.Services.Interfaces;
+@using ExtensaoCurricular.Shared.Dtos.General;
+@using ExtensaoCurricular.Shared.Dtos.Geral;
+@using ExtensaoCurricular.Shared.Enums;
+@using ExtensaoCurricular.Shared.Extensions;
+@using ExtensaoCurricular.Shared.Models.General;
+@using ExtensaoCurricular.Shared.Models.Geral;
+@using MudBlazor;
+
+@inject IPacienteService _pacienteService
+
+<CadModalBase T="Paciente" CadModalBaseInfo="CadModalBaseInfo" OnSubmit="HandleSubmitButtonClicked" OnCancel="HandleCancelButtonClicked" @bind-Visibility="CadModalBaseInfo.Visibility">
+    <MudForm @ref="Form" Model="Paciente" Validation="@(new PacienteValidator().ValidateValue)">
+        <EnterPressActionComponent Action="HandleSubmitButtonClicked">
+            <div class="d-flex" style="gap: 0.6rem">
+                <MudTextField @bind-Value="Paciente.NomeCompleto" For="@(() => Paciente.NomeCompleto)" Label="Nome Completo" Variant="Variant.Filled" Margin="Margin.Dense" Format="N2" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Percent" AdornmentColor="Color.Primary" />
+                <MudTextField @bind-Value="Paciente.CPF" For="@(() => Paciente.CPF)" Label="CPF" Variant="Variant.Filled" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.DateRange" AdornmentColor="Color.Primary" />
+            </div>
+        </EnterPressActionComponent>
+    </MudForm>
+</CadModalBase>
+
+@code {
+    [Parameter] public CadModalBaseInfo CadModalBaseInfo { get; set; }
+    [Parameter] public EventCallback<Paciente> OnSuccessSubmit { get; set; }
+    [Parameter] public EventCallback<Paciente> OnCancel { get; set; }
+
+    private Paciente Paciente { get; set; }
+    private MudForm Form { get; set; }
+
+    private List<PacienteDto> Pacientes { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPacienteDataAsync();
+    }
+
+    private async Task LoadPacienteDataAsync()
+    {
+        Paciente = CadModalBaseInfo.Tipo switch
+        {
+            ETipoCad.Add => new(),
+            ETipoCad.Edit => await _pacienteService.GetByIdAsync(CadModalBaseInfo.Id),
+            _ => null
+        };
+    }
+
+    private async Task HandleSubmitButtonClicked()
+    {
+        await Form.Validate();
+        if (!Form.IsValid) return;
+
+        var isSucessfullySubmited = CadModalBaseInfo.Tipo switch
+        {
+            ETipoCad.Add => await _pacienteService.CreateAsync(Paciente),
+            ETipoCad.Edit => await _pacienteService.UpdateAsync(Paciente),
+            _ => false
+        };
+        if (!isSucessfullySubmited) return;
+
+        await OnSuccessSubmit.InvokeAsync();
+    }
+
+    private async Task HandleCancelButtonClicked()
+    {
+        await OnCancel.InvokeAsync();
+    }
+}

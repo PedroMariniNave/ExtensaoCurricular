@@ -1,0 +1,59 @@
+﻿@using ExtensaoCurricular.Client.CadModalBase;
+@using ExtensaoCurricular.Client.Services.Interfaces;
+@using ExtensaoCurricular.Shared.Enums;
+@using ExtensaoCurricular.Shared.Extensions;
+@using ExtensaoCurricular.Shared.Models.General;
+@using MudBlazor;
+
+@inject IIndicadorService _indicadorService
+
+<CadModalBase T="Indicador" CadModalBaseInfo="CadModalBaseInfo" OnSubmit="HandleSubmitButtonClicked" OnCancel="HandleCancelButtonClicked" @bind-Visibility="CadModalBaseInfo.Visibility">
+    <MudForm @ref="Form" Model="Indicador" Validation="@(new IndicadorValidator().ValidateValue)">
+        <EnterPressActionComponent Action="HandleSubmitButtonClicked">
+            <div class="d-flex" style="gap: 0.6rem">
+                <MudTextField @bind-Value="Indicador.Nome" For="@(() => Indicador.Nome)" Label="Nome" Variant="Variant.Filled" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Sell" AdornmentColor="Color.Primary" />
+                <MudTextField @bind-Value="Indicador.Descricao" For="@(() => Indicador.Descricao)" Label="Descrição" Variant="Variant.Filled" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Description" AdornmentColor="Color.Primary" />
+            </div>
+        </EnterPressActionComponent>
+    </MudForm>
+</CadModalBase>
+
+@code {
+    [Parameter] public CadModalBaseInfo CadModalBaseInfo { get; set; }
+    [Parameter] public EventCallback<Indicador> OnSuccessSubmit { get; set; }
+    [Parameter] public EventCallback<Indicador> OnCancel { get; set; }
+
+    private Indicador Indicador { get; set; }
+    private MudForm Form { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Indicador = CadModalBaseInfo.Tipo switch
+        {
+            ETipoCad.Add => new(),
+            ETipoCad.Edit => await _indicadorService.GetByIdAsync(CadModalBaseInfo.Id),
+            _ => null
+        };
+    }
+
+    private async Task HandleSubmitButtonClicked()
+    {
+        await Form.Validate();
+        if (!Form.IsValid) return;
+
+        var isSucessfullySubmited = CadModalBaseInfo.Tipo switch
+        {
+            ETipoCad.Add => await _indicadorService.CreateAsync(Indicador),
+            ETipoCad.Edit => await _indicadorService.UpdateAsync(Indicador),
+            _ => false
+        };
+        if (!isSucessfullySubmited) return;
+
+        await OnSuccessSubmit.InvokeAsync();
+    }
+
+    private async Task HandleCancelButtonClicked()
+    {
+        await OnCancel.InvokeAsync();
+    }
+}

@@ -1,0 +1,75 @@
+﻿@attribute [Route(UrlConstants.METAS)]
+
+@inject IMetaService _metaService
+@inject IDialogService _dialogService
+
+@using ExtensaoCurricular.Client.CadModalBase;
+@using ExtensaoCurricular.Client.Components
+@using ExtensaoCurricular.Client.Constants;
+@using ExtensaoCurricular.Client.Services.Interfaces;
+@using ExtensaoCurricular.Shared.Dtos.General;
+@using MudBlazor
+
+<PageTitle>Metas</PageTitle>
+
+<MudButton ButtonType="ButtonType.Button" Color="Color.Success" Variant="Variant.Outlined" OnClick="HandleAddButtonClicked">Adicionar</MudButton>
+
+<MudDataGrid Items="MetasList">
+    <Columns>
+        <TemplateColumn Title="Opções" Class="d-flex justify-center" CellClass="d-flex justify-center">
+            <CellTemplate>
+                <MudIconButton Size="@Size.Small" Icon="@Icons.Material.Outlined.Edit" Title="Editar" OnClick="@(() => HandleEditButtonClicked(context.Item.Id))" />
+                <MudIconButton Size="@Size.Small" Icon="@Icons.Material.Filled.DeleteForever" Title="Excluir" OnClick="@(() => HandleDeleteButtonClicked(context.Item.Id))" />
+            </CellTemplate>
+        </TemplateColumn>
+        <PropertyColumn Property="x => x.NomeDescricaoIndicador" Title="Indicador" />
+        <TemplateColumn Title="Porcentagem">
+            <CellTemplate>
+                <span>@((context.Item.Porcentagem / 100).ToString("P02"))</span>
+            </CellTemplate>
+        </TemplateColumn>
+        <PropertyColumn Property="x => x.Ano" />
+    </Columns>
+</MudDataGrid>
+
+@if (CadModalBaseInfo.Visibility)
+{
+    <CadMeta CadModalBaseInfo="CadModalBaseInfo" OnSuccessSubmit="LoadDataFromDatabase" OnCancel="StateHasChanged" />
+}
+
+@code {
+    private List<MetaDto> MetasList { get; set; }
+    private CadModalBaseInfo CadModalBaseInfo { get; init; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataFromDatabase();
+    }
+
+    private async Task LoadDataFromDatabase()
+    {
+        MetasList = await _metaService.GetDtosAsync();
+    }
+
+    private void HandleAddButtonClicked()
+    {
+        CadModalBaseInfo.AddCad();
+    }
+
+    private void HandleEditButtonClicked(int id)
+    {
+        CadModalBaseInfo.EditCad(id);
+    }
+
+    private async Task HandleDeleteButtonClicked(int id)
+    {
+        var result = await _dialogService.ShowMessageBox(
+                    "Remover",
+                    "Você tem certeza que deseja deletar este item?",
+                    yesText: "Confirmar", cancelText: "Cancelar");
+        if (!result.GetValueOrDefault()) return;
+
+        await _metaService.DeleteAsync(id);
+        await LoadDataFromDatabase();
+    }
+}

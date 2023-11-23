@@ -1,0 +1,15 @@
+﻿<div @onkeyup="HandleKeyUpActionAsync">
+    @ChildContent
+</div>
+
+@code {
+    [Parameter] public RenderFragment ChildContent { get; set; }
+    [Parameter] public EventCallback Action { get; set; }
+
+    private async Task HandleKeyUpActionAsync(KeyboardEventArgs args)
+    {
+        if (args.Key != "Enter") return;
+
+        await Action.InvokeAsync();
+    }
+}

@@ -1,0 +1,54 @@
+﻿@using Blazored.LocalStorage;
+@using ExtensaoCurricular.Client.Utils;
+@using MudBlazor
+@using Toolbelt.Blazor;
+
+@inject IHttpClientInterceptor _interceptor
+@inject MethodInjectionUtils _methodInjectionUtils
+@inject InterceptorUtils _interceptorUtils
+@inject NavigationManager _navigationManager
+
+@inherits LayoutComponentBase
+
+<MudThemeProvider IsDarkMode="true" Theme="Theme" />
+<MudDialogProvider CloseOnEscapeKey="true" CloseButton="true" MaxWidth="MaxWidth.Large" FullWidth="true" />
+<MudSnackbarProvider />
+
+@if (OnInitializedComplete)
+{
+    <div class="d-flex">
+        <div>
+            <NavMenu />
+        </div>
+
+        <div class="page">
+            <main>
+                <MudContainer MaxWidth="MaxWidth.False">
+                    @Body
+                </MudContainer>
+            </main>
+        </div>
+    </div>
+}
+
+@code {
+    private bool OnInitializedComplete { get; set; }
+    private bool ErrorsDrawerOpen { get; set; }
+
+    private MudTheme Theme = new()
+        {
+            PaletteDark = new PaletteDark()
+            {
+                Primary = Colors.Blue.Lighten1,
+                Secondary = Colors.Blue.Lighten2,
+                TextPrimary = Colors.Grey.Lighten2
+            }
+        };
+
+    protected override async Task OnInitializedAsync()
+    {
+        _interceptor.AfterSendAsync += _interceptorUtils.HandleHttpStatusCodeAsync;
+
+        OnInitializedComplete = true;
+    }
+}

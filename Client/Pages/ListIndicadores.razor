@@ -1,0 +1,70 @@
+﻿@attribute [Route(UrlConstants.INDICADORES)]
+
+@inject IIndicadorService _indicadorService
+@inject IDialogService _dialogService
+
+@using ExtensaoCurricular.Client.CadModalBase;
+@using ExtensaoCurricular.Client.Components
+@using ExtensaoCurricular.Client.Constants;
+@using ExtensaoCurricular.Client.Services.Interfaces;
+@using ExtensaoCurricular.Shared.Dtos.General;
+@using MudBlazor
+
+<PageTitle>Indicadores</PageTitle>
+
+<MudButton ButtonType="ButtonType.Button" Color="Color.Success" Variant="Variant.Outlined" OnClick="HandleAddButtonClicked">Adicionar</MudButton>
+
+<MudDataGrid Items="IndicadoresList">
+    <Columns>
+        <TemplateColumn Title="Opções" Class="d-flex justify-center" CellClass="d-flex justify-center">
+            <CellTemplate>
+                <MudIconButton Size="@Size.Small" Icon="@Icons.Material.Outlined.Edit" Title="Editar" OnClick="@(() => HandleEditButtonClicked(context.Item.Id))" />
+                <MudIconButton Size="@Size.Small" Icon="@Icons.Material.Filled.DeleteForever" Title="Excluir" OnClick="@(() => HandleDeleteButtonClicked(context.Item.Id))" />
+            </CellTemplate>
+        </TemplateColumn>
+        <PropertyColumn Property="x => x.Nome" />
+        <PropertyColumn Property="x => x.Descricao" Title="Descrição" />
+    </Columns>
+</MudDataGrid>
+
+@if (CadModalBaseInfo.Visibility)
+{
+    <CadIndicador CadModalBaseInfo="CadModalBaseInfo" OnSuccessSubmit="LoadDataFromDatabase" OnCancel="StateHasChanged" />
+}
+
+@code {
+    private List<IndicadorDto> IndicadoresList { get; set; }
+    private CadModalBaseInfo CadModalBaseInfo { get; init; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataFromDatabase();
+    }
+
+    private async Task LoadDataFromDatabase()
+    {
+        IndicadoresList = await _indicadorService.GetDtosAsync();
+    }
+
+    private void HandleAddButtonClicked()
+    {
+        CadModalBaseInfo.AddCad();
+    }
+
+    private void HandleEditButtonClicked(int id)
+    {
+        CadModalBaseInfo.EditCad(id);
+    }
+
+    private async Task HandleDeleteButtonClicked(int id)
+    {
+        var result = await _dialogService.ShowMessageBox(
+                    "Remover",
+                    "Você tem certeza que deseja deletar este item?",
+                    yesText: "Confirmar", cancelText: "Cancelar");
+        if (!result.GetValueOrDefault()) return;
+
+        await _indicadorService.DeleteAsync(id);
+        await LoadDataFromDatabase();
+    }
+}

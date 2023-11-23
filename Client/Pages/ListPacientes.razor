@@ -1,0 +1,72 @@
+﻿@attribute [Route(UrlConstants.PACIENTES)]
+
+@inject IPacienteService _pacienteService
+@inject IDialogService _dialogService
+
+@using ExtensaoCurricular.Client.CadModalBase;
+@using ExtensaoCurricular.Client.Components
+@using ExtensaoCurricular.Client.Constants;
+@using ExtensaoCurricular.Client.Services.Interfaces;
+@using ExtensaoCurricular.Shared.Dtos.General;
+@using ExtensaoCurricular.Shared.Dtos.Geral;
+@using MudBlazor
+
+<PageTitle>Pacientes</PageTitle>
+
+<MudButton ButtonType="ButtonType.Button" Color="Color.Success" Variant="Variant.Outlined" OnClick="HandleAddButtonClicked">Adicionar</MudButton>
+
+<MudDataGrid Items="PacientesList">
+    <Columns>
+        <TemplateColumn Title="Opções" Class="d-flex justify-center" CellClass="d-flex justify-center">
+            <CellTemplate>
+                <MudIconButton Size="@Size.Small" Icon="@Icons.Material.Outlined.Edit" Title="Editar" OnClick="@(() => HandleEditButtonClicked(context.Item.Id))" />
+                <MudIconButton Size="@Size.Small" Icon="@Icons.Material.Filled.DeleteForever" Title="Excluir" OnClick="@(() => HandleDeleteButtonClicked(context.Item.Id))" />
+            </CellTemplate>
+        </TemplateColumn>
+        <PropertyColumn Property="x => x.Nome" />
+        <PropertyColumn Property="x => x.Telefone" />
+        <PropertyColumn Property="x => x.DataNascimento" Title="Data de Nascimento" Format="dd/MM/yyyy" />
+    </Columns>
+</MudDataGrid>
+
+@if (CadModalBaseInfo.Visibility)
+{
+    <CadPaciente CadModalBaseInfo="CadModalBaseInfo" OnSuccessSubmit="LoadDataFromDatabase" OnCancel="StateHasChanged" />
+}
+
+@code {
+    private List<PacienteDto> PacientesList { get; set; }
+    private CadModalBaseInfo CadModalBaseInfo { get; init; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataFromDatabase();
+    }
+
+    private async Task LoadDataFromDatabase()
+    {
+        PacientesList = await _pacienteService.GetDtosAsync();
+    }
+
+    private void HandleAddButtonClicked()
+    {
+        CadModalBaseInfo.AddCad();
+    }
+
+    private void HandleEditButtonClicked(int id)
+    {
+        CadModalBaseInfo.EditCad(id);
+    }
+
+    private async Task HandleDeleteButtonClicked(int id)
+    {
+        var result = await _dialogService.ShowMessageBox(
+                    "Remover",
+                    "Você tem certeza que deseja deletar este item?",
+                    yesText: "Confirmar", cancelText: "Cancelar");
+        if (!result.GetValueOrDefault()) return;
+
+        await _pacienteService.DeleteAsync(id);
+        await LoadDataFromDatabase();
+    }
+}

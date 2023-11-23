@@ -1,0 +1,90 @@
+﻿@using ExtensaoCurricular.Client.CadModalBase;
+@using ExtensaoCurricular.Client.Services.Interfaces;
+@using ExtensaoCurricular.Shared.Dtos.General;
+@using ExtensaoCurricular.Shared.Enums;
+@using ExtensaoCurricular.Shared.Extensions;
+@using ExtensaoCurricular.Shared.Models.General;
+@using MudBlazor;
+
+@inject IMetaService _metaService
+@inject IIndicadorService _indicadorService
+
+<CadModalBase T="Meta" CadModalBaseInfo="CadModalBaseInfo" OnSubmit="HandleSubmitButtonClicked" OnCancel="HandleCancelButtonClicked" @bind-Visibility="CadModalBaseInfo.Visibility">
+    <MudForm @ref="Form" Model="Meta" Validation="@(new MetaValidator().ValidateValue)">
+        <EnterPressActionComponent Action="HandleSubmitButtonClicked">
+            <MudSelect T="int?" Label="Indicador" Variant="Variant.Filled" Margin="Margin.Dense" AnchorOrigin="Origin.BottomCenter" ValueChanged="HandleIndicadorChanged">
+                @foreach (var indicador in Indicadores)
+                {
+                    <MudSelectItem Value="@(indicador.Id as int?)">
+                        @($"{indicador.Nome} - {indicador.Descricao}")
+                    </MudSelectItem>
+                }
+            </MudSelect>
+
+            <div class="d-flex" style="gap: 0.6rem">
+                <MudNumericField @bind-Value="Meta.Porcentagem" For="@(() => Meta.Porcentagem)" Label="Porcentagem" Variant="Variant.Filled" Margin="Margin.Dense" Format="N2" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Percent" AdornmentColor="Color.Primary" HideSpinButtons="true" />
+                <MudTextField @bind-Value="Meta.Ano" For="@(() => Meta.Ano)" Label="Ano" Variant="Variant.Filled" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.DateRange" AdornmentColor="Color.Primary" />
+            </div>
+        </EnterPressActionComponent>
+    </MudForm>
+</CadModalBase>
+
+@code {
+    [Parameter] public CadModalBaseInfo CadModalBaseInfo { get; set; }
+    [Parameter] public EventCallback<Meta> OnSuccessSubmit { get; set; }
+    [Parameter] public EventCallback<Meta> OnCancel { get; set; }
+
+    private Meta Meta { get; set; }
+    private MudForm Form { get; set; }
+
+    private List<IndicadorDto> Indicadores { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var taskLoadMeta = LoadMetaAsync();
+        var taskLoadIndicadores = LoadIndicadoresAsync();
+
+        await Task.WhenAll(taskLoadMeta, taskLoadIndicadores);
+    }
+
+    private async Task LoadMetaAsync()
+    {
+        Meta = CadModalBaseInfo.Tipo switch
+        {
+            ETipoCad.Add => new(),
+            ETipoCad.Edit => await _metaService.GetByIdAsync(CadModalBaseInfo.Id),
+            _ => null
+        };
+    }
+
+    private async Task LoadIndicadoresAsync()
+    {
+        Indicadores = await _indicadorService.GetDtosAsync();
+    }
+
+    private void HandleIndicadorChanged(int? indicadorId)
+    {
+        Meta.IndicadorId = indicadorId.GetValueOrDefault();
+    }
+
+    private async Task HandleSubmitButtonClicked()
+    {
+        await Form.Validate();
+        if (!Form.IsValid) return;
+
+        var isSucessfullySubmited = CadModalBaseInfo.Tipo switch
+        {
+            ETipoCad.Add => await _metaService.CreateAsync(Meta),
+            ETipoCad.Edit => await _metaService.UpdateAsync(Meta),
+            _ => false
+        };
+        if (!isSucessfullySubmited) return;
+
+        await OnSuccessSubmit.InvokeAsync();
+    }
+
+    private async Task HandleCancelButtonClicked()
+    {
+        await OnCancel.InvokeAsync();
+    }
+}
